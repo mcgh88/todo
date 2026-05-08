@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TaskTrack">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>TaskTrack</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --surface2: #0f3460;
+  --accent: #e94560;
+  --green: #4ecca3;
+  --text: #eaeaea;
+  --text-dim: #8892a4;
+  --text-faint: #555e70;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --radius: 12px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  height: 100%; background: var(--bg); color: var(--text);
+  font-family: var(--sans); -webkit-tap-highlight-color: transparent; overflow: hidden;
+}
+
+/* ---- TOP BAR ---- */
+.top-bar {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg); border-bottom: 1px solid rgba(255,255,255,0.06);
+  z-index: 100; padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top));
+  min-height: 48px;
+}
+.top-bar-title {
+  font-family: var(--mono); font-size: 16px; font-weight: 700;
+  color: var(--text); letter-spacing: -0.5px;
+}
+.back-btn {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--text-dim); font-size: 22px;
+  cursor: pointer; padding: 4px 8px; display: none;
+}
+.back-btn:active { opacity: 0.7; }
+.top-bar-right {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  display: flex; gap: 4px;
+}
+.top-icon-btn {
+  background: none; border: none; color: var(--text-dim); font-size: 18px;
+  cursor: pointer; padding: 4px 8px;
+}
+.top-icon-btn:active { opacity: 0.7; }
+
+/* ---- VIEWS ---- */
+.view {
+  position: absolute; top: 48px; left: 0; right: 0; bottom: 0;
+  padding-top: env(safe-area-inset-top);
+  overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+}
+.view.active { display: flex; flex-direction: column; }
+.view-scroll {
+  flex: 1; overflow-y: auto; padding: 16px 16px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---- LIST CARDS ---- */
+.list-card {
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; transition: opacity 0.15s; position: relative;
+}
+.list-card:active { opacity: 0.85; }
+.lc-drag {
+  cursor: grab; padding: 4px 2px;
+  display: flex; align-items: center; touch-action: none; flex-shrink: 0; opacity: 0.35;
+}
+.lc-drag:active { cursor: grabbing; }
+.lc-drag svg { width: 16px; height: 16px; }
+.lc-info { flex: 1; min-width: 0; }
+.lc-name {
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lc-count { font-size: 11px; margin-top: 3px; font-family: var(--mono); opacity: 0.7; }
+.lc-bar { height: 4px; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.lc-bar-dk { background: rgba(0,0,0,0.15); }
+.list-card.lt .lc-bar-dk { background: rgba(255,255,255,0.15); }
+.lc-fill { height: 100%; border-radius: 2px; transition: width 0.3s ease; }
+.lc-fill-dk { background: rgba(0,0,0,0.3); }
+.list-card.lt .lc-fill-dk { background: rgba(255,255,255,0.35); }
+.lc-right { display: flex; align-items: center; gap: 6px; }
+.lc-frac { font-family: var(--mono); font-size: 13px; font-weight: 700; opacity: 0.8; }
+.menu-btn {
+  background: none; border: none; font-size: 20px; cursor: pointer;
+  padding: 4px 8px; letter-spacing: 1px; line-height: 1;
+  color: inherit; opacity: 0.7;
+}
+.menu-btn:active { opacity: 1; }
+
+/* ---- TASK ITEMS ---- */
+.task-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; border-radius: 8px; margin-bottom: 6px;
+  font-size: 14px; transition: opacity 0.3s; position: relative;
+  background: var(--surface); color: var(--text);
+}
+.task-item.done { opacity: 0.4; }
+.task-item.done .task-name { text-decoration: line-through; }
+.task-cb {
+  width: 24px; height: 24px; border-radius: 6px;
+  border: 2px solid var(--text-faint); background: rgba(255,255,255,0.05);
+  cursor: pointer; flex-shrink: 0; display: flex;
+  align-items: center; justify-content: center; transition: all 0.15s;
+}
+.task-cb.chk { background: var(--green); border-color: var(--green); color: var(--bg); }
+.task-cb.chk::after { content: '✓'; font-size: 14px; font-weight: 700; }
+.task-name { flex: 1; font-family: var(--mono); font-size: 13px; word-break: break-word; min-width: 0; }
+.t-drag {
+  cursor: grab; padding: 4px 2px; display: flex; align-items: center;
+  touch-action: none; flex-shrink: 0; color: var(--text-faint); opacity: 0.5;
+}
+.t-drag:active { cursor: grabbing; }
+.t-drag svg { width: 16px; height: 16px; }
+.t-menu {
+  background: none; border: none; font-size: 16px; cursor: pointer;
+  padding: 4px 6px; letter-spacing: 1px; line-height: 1;
+  color: var(--text-faint); opacity: 0.8;
+}
+
+/* ---- SEPARATOR ---- */
+.sep-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 12px; margin-bottom: 6px; position: relative;
+  cursor: pointer;
+}
+.sep-drag {
+  cursor: grab; padding: 4px 2px; display: flex; align-items: center;
+  touch-action: none; flex-shrink: 0; opacity: 0.35;
+}
+.sep-drag:active { cursor: grabbing; }
+.sep-drag svg { width: 14px; height: 14px; }
+.sep-line {
+  flex: 1; height: 3px; border-radius: 2px;
+}
+.sep-item.drag-over { border-top: 2px solid var(--accent); }
+.sep-item.dragging { opacity: 0.5; }
+
+/* ---- BOTTOM BARS ---- */
+.bottom-bar {
+  background: var(--surface); border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0;
+}
+.input-bar { display: flex; gap: 8px; padding: 12px 16px; }
+.input-bar.hb { padding-bottom: 6px; }
+.input-bar input {
+  flex: 1; background: var(--bg); border: 1px solid var(--text-faint);
+  color: var(--text); font-family: var(--mono); font-size: 13px;
+  padding: 10px 12px; border-radius: 8px; outline: none; min-width: 0;
+}
+.input-bar input:focus { border-color: var(--accent); }
+.input-bar input::placeholder { color: var(--text-faint); }
+.add-btn {
+  width: 42px; height: 42px; border-radius: 8px;
+  background: var(--accent); border: none; color: white;
+  font-size: 22px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s;
+}
+.add-btn:active { transform: scale(0.95); }
+.imp-btn {
+  width: 42px; height: 42px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--text-faint); color: var(--text-dim);
+  font-size: 16px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s;
+}
+.imp-btn:active { transform: scale(0.95); }
+.ov-pad { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+
+/* ---- CLEAR DONE ---- */
+.clear-btn {
+  background: none; border: none; color: var(--text-faint);
+  font-family: var(--mono); font-size: 11px; cursor: pointer;
+  padding: 12px 0; text-align: center; width: 100%;
+  transition: color 0.15s;
+}
+.clear-btn:active { color: var(--accent); }
+
+/* ---- DONE DIVIDER ---- */
+.done-div { display: flex; align-items: center; gap: 8px; padding: 8px 0 4px; margin-top: 4px; }
+.done-div-line { flex: 1; height: 1px; background: var(--text-faint); opacity: 0.3; }
+.done-div-label { font-family: var(--mono); font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 1px; }
+
+/* ---- POPUP ---- */
+.pop-ov {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5); z-index: 200; display: none;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.pop-ov.show { display: flex; }
+.popup {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 8px; width: 100%; max-width: 280px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.pop-item {
+  padding: 12px 16px; border-radius: 8px; cursor: pointer;
+  font-family: var(--sans); font-size: 14px; font-weight: 500;
+  color: var(--text); transition: background 0.1s;
+  display: flex; align-items: center; gap: 10px;
+}
+.pop-item:active { background: var(--surface2); }
+.pop-item.danger { color: var(--accent); }
+.pop-ico { font-size: 16px; width: 20px; text-align: center; }
+
+/* ---- MODAL ---- */
+.mod-ov {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7); z-index: 300;
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.mod-ov.show { display: flex; }
+.modal {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 24px; width: 100%; max-width: 320px; max-height: 80vh; overflow-y: auto;
+}
+.modal h2 { font-family: var(--mono); font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.modal p { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.5; }
+.mod-btns { display: flex; gap: 8px; }
+.modal input[type="text"] {
+  width: 100%; background: var(--bg); border: 1px solid var(--text-faint);
+  color: var(--text); font-family: var(--mono); font-size: 14px;
+  padding: 10px 12px; border-radius: 8px; outline: none; margin-bottom: 16px;
+}
+.modal input[type="text"]:focus { border-color: var(--accent); }
+.modal textarea {
+  width: 100%; min-height: 140px; background: var(--bg);
+  border: 1px solid var(--text-faint); border-radius: 8px;
+  color: var(--text); font-family: var(--mono); font-size: 13px;
+  padding: 12px; outline: none; resize: vertical; margin-bottom: 12px;
+}
+.modal textarea:focus { border-color: var(--accent); }
+.modal textarea::placeholder { color: var(--text-faint); }
+.mod-msg { font-family: var(--mono); font-size: 12px; padding: 8px 0 0; min-height: 20px; color: var(--text-dim); }
+.btn {
+  padding: 10px 20px; border: none; border-radius: 8px;
+  font-family: var(--sans); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: transform 0.1s, opacity 0.2s; flex: 1;
+}
+.btn:active { transform: scale(0.97); }
+.btn-accent { background: var(--accent); color: white; }
+.btn-green { background: var(--green); color: var(--bg); }
+.btn-outline { background: none; border: 1px solid var(--text-faint); color: var(--text); }
+.btn-danger { background: rgba(233,69,96,0.15); color: var(--accent); border: 1px solid var(--accent); }
+
+/* ---- COLOR PICKER ---- */
+.cp-row { display: flex; gap: 8px; margin-bottom: 16px; justify-content: center; flex-wrap: wrap; }
+.cp-sw {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 3px solid transparent; cursor: pointer;
+  transition: transform 0.1s, border-color 0.15s;
+}
+.cp-sw:active { transform: scale(1.1); }
+.cp-sw.active { border-color: white; }
+
+/* ---- MOVE LIST ---- */
+.mv-item {
+  padding: 12px 16px; border-radius: 8px; cursor: pointer;
+  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  transition: opacity 0.1s; margin-bottom: 4px;
+}
+.mv-item:active { opacity: 0.7; }
+
+/* ---- EMPTY STATE ---- */
+.empty-state {
+  text-align: center; padding: 60px 20px; color: var(--text-dim);
+  font-size: 14px; font-family: var(--mono);
+}
+.empty-state .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+
+/* ---- TOAST ---- */
+.toast {
+  position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+  background: var(--surface2); color: var(--text); padding: 10px 20px;
+  border-radius: 20px; font-size: 13px; font-family: var(--sans);
+  opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 400;
+  white-space: nowrap; max-width: 90%;
+}
+.toast.show { opacity: 1; }
+
+/* ---- DRAG ---- */
+.task-item.dragging, .list-card.dragging { opacity: 0.5; }
+.task-item.drag-over { border-top: 2px solid var(--accent); }
+.list-card.drag-over { border-top: 2px solid white; }
+
+/* ---- SWIPE INDICATOR ---- */
+.swipe-indicator {
+  position: fixed; left: 0; top: 48px; bottom: 0; width: 40px;
+  z-index: 50; pointer-events: none;
+}
+.swipe-arrow {
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  font-size: 20px; color: var(--text-dim); opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.view-scroll::-webkit-scrollbar { width: 4px; }
+.view-scroll::-webkit-scrollbar-thumb { background: var(--text-faint); border-radius: 2px; }
+
+@media (max-width: 380px) {
+  .lc-name { font-size: 13px; }
+  .task-name { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- OVERVIEW -->
+<div class="view active" id="view-overview">
+  <div class="top-bar">
+    <span class="top-bar-title">TaskTrack</span>
+    <div class="top-bar-right">
+      <button class="top-icon-btn" id="global-menu-btn" title="Menu">⋯</button>
+    </div>
+  </div>
+  <div class="view-scroll" id="ov-scroll"><div id="list-cards"></div></div>
+  <div class="bottom-bar ov-pad">
+    <div class="input-bar">
+      <input type="text" id="new-list-input" placeholder="New list..." maxlength="40">
+      <button class="add-btn" id="add-list-btn">+</button>
+    </div>
+  </div>
+</div>
+
+<!-- LIST VIEW -->
+<div class="view" id="view-list">
+  <div class="top-bar">
+    <button class="back-btn" id="back-btn" style="display:flex;">‹</button>
+    <span class="top-bar-title" id="list-title">List</span>
+  </div>
+  <div class="view-scroll" id="list-scroll">
+    <div id="task-list"></div>
+    <button class="clear-btn" id="clear-btn" style="display:none;">clear completed</button>
+  </div>
+  <div class="bottom-bar">
+    <div class="input-bar" style="padding-bottom: calc(12px + env(safe-area-inset-bottom));">
+      <input type="text" id="new-task-input" placeholder="New task..." maxlength="200">
+      <button class="imp-btn" id="sep-btn" title="Add separator">━</button>
+      <button class="imp-btn" id="imp-btn" title="Bulk import">📋</button>
+      <button class="add-btn" id="add-task-btn">+</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAYS -->
+<div class="pop-ov" id="pop-ov"><div class="popup" id="popup"></div></div>
+<div class="mod-ov" id="mod-ov"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// COLORS
+// ============================================================
+const COLORS = {
+  blue:   { bg: '#3b82f6', text: '#ffffff', light: true },
+  purple: { bg: '#a855f7', text: '#ffffff', light: true },
+  pink:   { bg: '#ec4899', text: '#ffffff', light: true },
+  red:    { bg: '#e94560', text: '#ffffff', light: true },
+  orange: { bg: '#f97316', text: '#1a1a2e', light: false },
+  gold:   { bg: '#eab308', text: '#1a1a2e', light: false },
+  teal:   { bg: '#14b8a6', text: '#1a1a2e', light: false },
+  green:  { bg: '#4ecca3', text: '#1a1a2e', light: false },
+  slate:  { bg: '#64748b', text: '#ffffff', light: true },
+};
+const CK = Object.keys(COLORS);
+const DC = 'blue';
+function gc(k) { return COLORS[k] || COLORS[DC]; }
+
+// Separator colors (subset)
+const SEP_COLORS = ['gold', 'red', 'green', 'blue'];
+
+// ============================================================
+// DATA
+// ============================================================
+const SK = 'tasktrack_v1';
+function defStore() { return { lists: [], listOrder: [] }; }
+function loadStore() { try { const r = localStorage.getItem(SK); if (r) return JSON.parse(r); } catch(e) {} return defStore(); }
+function saveStore() { localStorage.setItem(SK, JSON.stringify(store)); }
+let store = loadStore();
+store.lists.forEach(l => { if (!l.color) l.color = DC; });
+function gid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function gl(id) { return store.lists.find(l => l.id === id); }
+let curList = null;
+
+// ============================================================
+// OVERVIEW
+// ============================================================
+function renderOV() {
+  const ct = document.getElementById('list-cards');
+  if (store.listOrder.length === 0) {
+    ct.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div>No lists yet.<br>Create one below.</div>';
+    return;
+  }
+  ct.innerHTML = '';
+  store.listOrder.forEach(id => {
+    const list = gl(id); if (!list) return;
+    const tasks = list.tasks.filter(t => t.type !== 'sep');
+    const total = tasks.length;
+    const done = tasks.filter(t => t.done).length;
+    const rem = total - done;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    const c = gc(list.color);
+
+    const card = document.createElement('div');
+    card.className = 'list-card' + (c.light ? ' lt' : '');
+    card.style.background = c.bg; card.style.color = c.text;
+    card.dataset.listId = id;
+
+    card.innerHTML = `
+      <div class="lc-drag" draggable="false">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="4" r="1.5"/><circle cx="11" cy="4" r="1.5"/><circle cx="5" cy="8" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="12" r="1.5"/></svg>
+      </div>
+      <div class="lc-info">
+        <div class="lc-name">${esc(list.name)}</div>
+        <div class="lc-count">${rem} remaining${done > 0 ? ' · ' + done + ' done' : ''}</div>
+        ${total > 0 ? `<div class="lc-bar lc-bar-dk"><div class="lc-fill lc-fill-dk" style="width:${pct}%"></div></div>` : ''}
+      </div>
+      <div class="lc-right">
+        ${total > 0 ? `<span class="lc-frac">${done}/${total}</span>` : ''}
+        <button class="menu-btn" data-lm="${id}">⋯</button>
+      </div>`;
+
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.menu-btn') || e.target.closest('.lc-drag')) return;
+      openList(id);
+    });
+    card.querySelector('.menu-btn').addEventListener('click', (e) => { e.stopPropagation(); showListMenu(id); });
+    setupListDrag(card, id);
+    ct.appendChild(card);
+  });
+}
+
+// ============================================================
+// LIST DRAG
+// ============================================================
+function setupListDrag(card, listId) {
+  const handle = card.querySelector('.lc-drag');
+  let startY, dragging, cardEls, positions;
+
+  handle.addEventListener('touchstart', (e) => {
+    e.preventDefault(); startY = e.touches[0].clientY; dragging = false;
+    cardEls = Array.from(document.getElementById('list-cards').querySelectorAll('.list-card'));
+  }, { passive: false });
+
+  handle.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!dragging) { if (Math.abs(e.touches[0].clientY - startY) < 5) return; dragging = true; card.classList.add('dragging');
+      positions = cardEls.map(el => { const r = el.getBoundingClientRect(); return { el, mid: r.top + r.height / 2 }; });
+    }
+    const dy = e.touches[0].clientY - startY;
+    card.style.transform = `translateY(${dy}px)`; card.style.zIndex = '50'; card.style.position = 'relative';
+    const myPos = positions.find(p => p.el === card); if (!myPos) return;
+    cardEls.forEach(el => el.classList.remove('drag-over'));
+    for (const pos of positions) { if (pos.el === card) continue; if (myPos.mid + dy < pos.mid) { pos.el.classList.add('drag-over'); break; } }
+  }, { passive: false });
+
+  handle.addEventListener('touchend', () => {
+    if (!dragging) return;
+    card.classList.remove('dragging'); card.style.transform = ''; card.style.zIndex = ''; card.style.position = '';
+    const fromIdx = store.listOrder.indexOf(listId);
+    const overEl = cardEls.find(el => el.classList.contains('drag-over'));
+    if (overEl) {
+      let toIdx = store.listOrder.indexOf(overEl.dataset.listId);
+      if (toIdx > fromIdx) toIdx--;
+      if (fromIdx !== toIdx && fromIdx >= 0 && toIdx >= 0) {
+        const [moved] = store.listOrder.splice(fromIdx, 1);
+        store.listOrder.splice(toIdx, 0, moved);
+        saveStore();
+      }
+    }
+    cardEls.forEach(el => el.classList.remove('drag-over'));
+    renderOV();
+  });
+}
+
+// ============================================================
+// LIST VIEW
+// ============================================================
+function openList(id) {
+  curList = id;
+  const list = gl(id);
+  document.getElementById('list-title').textContent = list.name;
+  renderTasks();
+  switchView('list');
+  document.getElementById('new-task-input').value = '';
+}
+
+function goBack() {
+  curList = null;
+  switchView('overview');
+}
+
+function renderTasks() {
+  const list = gl(curList); if (!list) return;
+  const c = gc(list.color);
+  const ct = document.getElementById('task-list');
+  const cb = document.getElementById('clear-btn');
+
+  const pending = list.tasks.filter(t => !t.done && t.type !== 'sep');
+  const seps = list.tasks.filter(t => t.type === 'sep');
+  const done = list.tasks.filter(t => t.done && t.type !== 'sep');
+  // Items in order: non-done tasks and separators, then done divider, then done tasks
+  const pendingAndSeps = list.tasks.filter(t => t.type === 'sep' || !t.done);
+  const doneItems = list.tasks.filter(t => t.done && t.type !== 'sep');
+
+  if (list.tasks.length === 0) {
+    ct.innerHTML = '<div class="empty-state"><div class="empty-icon">✏️</div>No tasks yet.<br>Add one below.</div><div id="list-back-zone" style="min-height:200px;"></div>';
+    cb.style.display = 'none'; return;
+  }
+  ct.innerHTML = '';
+  pendingAndSeps.forEach(t => {
+    if (t.type === 'sep') {
+      ct.appendChild(mkSep(t));
+    } else {
+      ct.appendChild(mkTask(t, c));
+    }
+  });
+  if (doneItems.length > 0) {
+    const d = document.createElement('div'); d.className = 'done-div';
+    d.innerHTML = `<div class="done-div-line"></div><span class="done-div-label">${doneItems.length} done</span><div class="done-div-line"></div>`;
+    ct.appendChild(d);
+    doneItems.forEach(t => ct.appendChild(mkTask(t, c)));
+    cb.style.display = 'block';
+  } else { cb.style.display = 'none'; }
+  const zone = document.createElement('div');
+  zone.id = 'list-back-zone';
+  zone.style.minHeight = '200px';
+  ct.appendChild(zone);
+}
+
+function mkTask(task, c) {
+  const el = document.createElement('div');
+  el.className = 'task-item' + (task.done ? ' done' : '');
+  el.dataset.taskId = task.id;
+
+  el.innerHTML = `
+    <div class="t-drag" draggable="false">
+      <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="4" r="1.5"/><circle cx="11" cy="4" r="1.5"/><circle cx="5" cy="8" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="12" r="1.5"/></svg>
+    </div>
+    <div class="task-cb${task.done ? ' chk' : ''}"></div>
+    <span class="task-name">${esc(task.name)}</span>
+    <button class="t-menu">⋯</button>`;
+
+  el.querySelector('.task-cb').addEventListener('click', () => { task.done = !task.done; saveStore(); renderTasks(); });
+  el.querySelector('.t-menu').addEventListener('click', (e) => { e.stopPropagation(); showTaskMenu(task.id); });
+  setupTaskDrag(el, task);
+  return el;
+}
+
+function mkSep(sep) {
+  const el = document.createElement('div');
+  el.className = 'sep-item';
+  el.dataset.taskId = sep.id;
+  const color = gc(sep.color || 'gold').bg;
+
+  el.innerHTML = `
+    <div class="sep-drag" draggable="false">
+      <svg viewBox="0 0 16 16" fill="currentColor" style="color:${color}"><circle cx="5" cy="4" r="1.5"/><circle cx="11" cy="4" r="1.5"/><circle cx="5" cy="8" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="12" r="1.5"/></svg>
+    </div>
+    <div class="sep-line" style="background:${color}"></div>`;
+
+  el.addEventListener('click', (e) => {
+    if (e.target.closest('.sep-drag')) return;
+    showSepMenu(sep.id);
+  });
+  setupSepDrag(el, sep);
+  return el;
+}
+
+// ============================================================
+// SEPARATOR DRAG
+// ============================================================
+function setupSepDrag(el, sep) {
+  const handle = el.querySelector('.sep-drag');
+  let startY, dragging, allEls, positions;
+
+  handle.addEventListener('touchstart', (e) => {
+    e.preventDefault(); startY = e.touches[0].clientY; dragging = false;
+    allEls = Array.from(document.getElementById('task-list').querySelectorAll('.task-item:not(.done), .sep-item'));
+  }, { passive: false });
+
+  handle.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!dragging) { if (Math.abs(e.touches[0].clientY - startY) < 5) return; dragging = true; el.classList.add('dragging');
+      positions = allEls.map(el => { const r = el.getBoundingClientRect(); return { el, mid: r.top + r.height / 2 }; });
+    }
+    const dy = e.touches[0].clientY - startY;
+    el.style.transform = `translateY(${dy}px)`; el.style.zIndex = '50'; el.style.position = 'relative';
+    const myPos = positions.find(p => p.el === el); if (!myPos) return;
+    allEls.forEach(o => { o.classList.remove('drag-over'); });
+    for (const pos of positions) { if (pos.el === el) continue; if (myPos.mid + dy < pos.mid) { pos.el.classList.add('drag-over'); break; } }
+  }, { passive: false });
+
+  handle.addEventListener('touchend', () => {
+    if (!dragging) return;
+    el.classList.remove('dragging'); el.style.transform = ''; el.style.zIndex = ''; el.style.position = '';
+    const list = gl(curList);
+    const pendingAndSeps = list.tasks.filter(t => t.type === 'sep' || !t.done);
+    const doneItems = list.tasks.filter(t => t.done && t.type !== 'sep');
+    const fromIdx = pendingAndSeps.findIndex(t => t.id === sep.id);
+    const overEl = allEls.find(el => el.classList.contains('drag-over'));
+    let toIdx = pendingAndSeps.length - 1;
+    if (overEl) { toIdx = pendingAndSeps.findIndex(t => t.id === overEl.dataset.taskId); if (toIdx > fromIdx) toIdx--; }
+    if (fromIdx !== toIdx && fromIdx >= 0 && toIdx >= 0) {
+      const [moved] = pendingAndSeps.splice(fromIdx, 1); pendingAndSeps.splice(toIdx, 0, moved);
+      list.tasks = [...pendingAndSeps, ...doneItems]; saveStore();
+    }
+    allEls.forEach(el => { el.classList.remove('drag-over'); });
+    renderTasks();
+  });
+}
+
+// ============================================================
+// TASK DRAG
+// ============================================================
+function setupTaskDrag(el, task) {
+  if (task.done) return;
+  const handle = el.querySelector('.t-drag');
+  let startY, dragging, allEls, positions;
+
+  handle.addEventListener('touchstart', (e) => {
+    e.preventDefault(); startY = e.touches[0].clientY; dragging = false;
+    allEls = Array.from(document.getElementById('task-list').querySelectorAll('.task-item:not(.done), .sep-item'));
+  }, { passive: false });
+
+  handle.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!dragging) { if (Math.abs(e.touches[0].clientY - startY) < 5) return; dragging = true; el.classList.add('dragging');
+      positions = allEls.map(el => { const r = el.getBoundingClientRect(); return { el, mid: r.top + r.height / 2 }; });
+    }
+    const dy = e.touches[0].clientY - startY;
+    el.style.transform = `translateY(${dy}px)`; el.style.zIndex = '50'; el.style.position = 'relative';
+    const myPos = positions.find(p => p.el === el); if (!myPos) return;
+    allEls.forEach(o => o.classList.remove('drag-over'));
+    for (const pos of positions) { if (pos.el === el) continue; if (myPos.mid + dy < pos.mid) { pos.el.classList.add('drag-over'); break; } }
+  }, { passive: false });
+
+  handle.addEventListener('touchend', () => {
+    if (!dragging) return;
+    el.classList.remove('dragging'); el.style.transform = ''; el.style.zIndex = ''; el.style.position = '';
+    const list = gl(curList);
+    const pendingAndSeps = list.tasks.filter(t => t.type === 'sep' || !t.done);
+    const doneItems = list.tasks.filter(t => t.done && t.type !== 'sep');
+    const fromIdx = pendingAndSeps.findIndex(t => t.id === task.id);
+    const overEl = allEls.find(el => el.classList.contains('drag-over'));
+    let toIdx = pendingAndSeps.length - 1;
+    if (overEl) { toIdx = pendingAndSeps.findIndex(t => t.id === overEl.dataset.taskId); if (toIdx > fromIdx) toIdx--; }
+    if (fromIdx !== toIdx && fromIdx >= 0 && toIdx >= 0) {
+      const [moved] = pendingAndSeps.splice(fromIdx, 1); pendingAndSeps.splice(toIdx, 0, moved);
+      list.tasks = [...pendingAndSeps, ...doneItems]; saveStore();
+    }
+    allEls.forEach(el => el.classList.remove('drag-over'));
+    renderTasks();
+  });
+}
+
+// ============================================================
+// MENUS
+// ============================================================
+function showListMenu(listId) {
+  const popup = document.getElementById('popup');
+  popup.innerHTML = `
+    <div class="pop-item" data-a="color"><span class="pop-ico">🎨</span> Change color</div>
+    <div class="pop-item" data-a="rename"><span class="pop-ico">✏️</span> Rename</div>
+    <div class="pop-item danger" data-a="delete"><span class="pop-ico">🗑</span> Delete list</div>`;
+  popup.querySelectorAll('.pop-item').forEach(item => {
+    item.addEventListener('click', () => { closePop(); const a = item.dataset.a;
+      if (a === 'rename') showRename(listId);
+      if (a === 'delete') showDeleteList(listId);
+      if (a === 'color') showColorPick(listId);
+    });
+  });
+  document.getElementById('pop-ov').classList.add('show');
+}
+
+function showTaskMenu(taskId) {
+  const others = store.listOrder.filter(id => id !== curList);
+  const popup = document.getElementById('popup');
+  popup.innerHTML = `
+    <div class="pop-item" data-a="edit"><span class="pop-ico">✏️</span> Edit task</div>
+    ${others.length > 0 ? '<div class="pop-item" data-a="move"><span class="pop-ico">📁</span> Move to...</div>' : ''}
+    <div class="pop-item danger" data-a="delete"><span class="pop-ico">🗑</span> Delete task</div>`;
+  popup.querySelectorAll('.pop-item').forEach(item => {
+    item.addEventListener('click', () => { const a = item.dataset.a;
+      if (a === 'delete') { closePop(); const list = gl(curList); list.tasks = list.tasks.filter(t => t.id !== taskId); saveStore(); renderTasks(); toast('Task deleted'); }
+      if (a === 'move') { closePop(); showMove(taskId); }
+      if (a === 'edit') { closePop(); showEditTask(taskId); }
+    });
+  });
+  document.getElementById('pop-ov').classList.add('show');
+}
+
+function showSepMenu(sepId) {
+  const list = gl(curList);
+  const sep = list.tasks.find(t => t.id === sepId);
+  if (!sep) return;
+  const popup = document.getElementById('popup');
+  let colorHtml = '<div style="display:flex;gap:8px;padding:8px 16px 4px;justify-content:center;">';
+  SEP_COLORS.forEach(k => {
+    const c = gc(k);
+    colorHtml += `<div class="cp-sw${sep.color === k ? ' active' : ''}" data-sc="${k}" style="background:${c.bg};width:28px;height:28px;"></div>`;
+  });
+  colorHtml += '</div>';
+  popup.innerHTML = `
+    ${colorHtml}
+    <div class="pop-item danger" data-a="delete"><span class="pop-ico">🗑</span> Delete separator</div>`;
+  popup.querySelectorAll('.cp-sw').forEach(sw => {
+    sw.addEventListener('click', () => {
+      sep.color = sw.dataset.sc; saveStore();
+      popup.querySelectorAll('.cp-sw').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      renderTasks();
+    });
+  });
+  popup.querySelector('[data-a="delete"]').addEventListener('click', () => {
+    closePop(); list.tasks = list.tasks.filter(t => t.id !== sepId); saveStore(); renderTasks(); toast('Separator deleted');
+  });
+  document.getElementById('pop-ov').classList.add('show');
+}
+
+function showGlobalMenu() {
+  const popup = document.getElementById('popup');
+  popup.innerHTML = `
+    <div class="pop-item" data-a="export"><span class="pop-ico">📤</span> Export all</div>
+    <div class="pop-item" data-a="import"><span class="pop-ico">📥</span> Import all</div>`;
+  popup.querySelectorAll('.pop-item').forEach(item => {
+    item.addEventListener('click', () => { closePop(); const a = item.dataset.a;
+      if (a === 'export') doGlobalExport();
+      if (a === 'import') showGlobalImport();
+    });
+  });
+  document.getElementById('pop-ov').classList.add('show');
+}
+
+function closePop() { document.getElementById('pop-ov').classList.remove('show'); }
+document.getElementById('pop-ov').addEventListener('click', (e) => { if (e.target === e.currentTarget) closePop(); });
+
+// ============================================================
+// MODALS
+// ============================================================
+function showMod(html) { document.getElementById('modal').innerHTML = html; document.getElementById('mod-ov').classList.add('show'); }
+function closeMod() { document.getElementById('mod-ov').classList.remove('show'); }
+document.getElementById('mod-ov').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeMod(); });
+
+function showRename(listId) {
+  const list = gl(listId);
+  showMod(`<h2>Rename list</h2>
+    <input type="text" id="ren-in" value="${esc(list.name)}" maxlength="40">
+    <div class="mod-btns">
+      <button class="btn btn-outline" id="mc">Cancel</button>
+      <button class="btn btn-accent" id="mk">Rename</button>
+    </div>`);
+  const inp = document.getElementById('ren-in'); inp.focus(); inp.select();
+  document.getElementById('mc').addEventListener('click', closeMod);
+  document.getElementById('mk').addEventListener('click', () => {
+    const n = inp.value.trim(); if (n) { list.name = n; saveStore(); renderOV();
+      if (curList === listId) document.getElementById('list-title').textContent = n;
+      toast('List renamed');
+    } closeMod();
+  });
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('mk').click(); });
+}
+
+function showEditTask(taskId) {
+  const list = gl(curList);
+  const task = list.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  showMod(`<h2>Edit task</h2>
+    <input type="text" id="edit-in" value="${esc(task.name)}" maxlength="200">
+    <div class="mod-btns">
+      <button class="btn btn-outline" id="mc">Cancel</button>
+      <button class="btn btn-accent" id="mk">Save</button>
+    </div>`);
+  const inp = document.getElementById('edit-in'); inp.focus(); inp.select();
+  document.getElementById('mc').addEventListener('click', closeMod);
+  document.getElementById('mk').addEventListener('click', () => {
+    const n = inp.value.trim(); if (n) { task.name = n; saveStore(); renderTasks(); toast('Task updated'); }
+    closeMod();
+  });
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('mk').click(); });
+}
+
+function showDeleteList(listId) {
+  const list = gl(listId);
+  showMod(`<h2>Delete list?</h2>
+    <p>Permanently delete "${esc(list.name)}" and all its tasks.</p>
+    <div class="mod-btns">
+      <button class="btn btn-outline" id="mc">Cancel</button>
+      <button class="btn btn-danger" id="mk">Delete</button>
+    </div>`);
+  document.getElementById('mc').addEventListener('click', closeMod);
+  document.getElementById('mk').addEventListener('click', () => {
+    store.listOrder = store.listOrder.filter(id => id !== listId);
+    store.lists = store.lists.filter(l => l.id !== listId);
+    saveStore(); renderOV(); toast('List deleted'); closeMod();
+  });
+}
+
+function showClearDone() {
+  const list = gl(curList);
+  const n = list.tasks.filter(t => t.done).length;
+  showMod(`<h2>Clear completed?</h2>
+    <p>Remove ${n} completed task${n !== 1 ? 's' : ''} from "${esc(list.name)}"?</p>
+    <div class="mod-btns">
+      <button class="btn btn-outline" id="mc">Cancel</button>
+      <button class="btn btn-danger" id="mk">Clear</button>
+    </div>`);
+  document.getElementById('mc').addEventListener('click', closeMod);
+  document.getElementById('mk').addEventListener('click', () => {
+    list.tasks = list.tasks.filter(t => !t.done);
+    saveStore(); renderTasks(); toast(n + ' task' + (n !== 1 ? 's' : '') + ' cleared'); closeMod();
+  });
+}
+
+function showColorPick(listId) {
+  const list = gl(listId);
+  let html = '<h2>List color</h2><div class="cp-row">';
+  CK.forEach(k => {
+    const c = gc(k);
+    html += `<div class="cp-sw${list.color === k ? ' active' : ''}" data-c="${k}" style="background:${c.bg}"></div>`;
+  });
+  html += '</div><div class="mod-btns"><button class="btn btn-outline" id="mc" style="flex:1;">Done</button></div>';
+  showMod(html);
+  document.getElementById('mc').addEventListener('click', closeMod);
+  document.querySelectorAll('.cp-sw').forEach(sw => {
+    sw.addEventListener('click', () => {
+      list.color = sw.dataset.c; saveStore();
+      document.querySelectorAll('.cp-sw').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      renderOV();
+      if (curList === listId) renderTasks();
+    });
+  });
+}
+
+function showMove(taskId) {
+  const others = store.listOrder.filter(id => id !== curList).map(id => gl(id)).filter(Boolean);
+  let html = '<h2>Move to...</h2><div style="margin-bottom:16px;">';
+  others.forEach(l => {
+    const c = gc(l.color);
+    html += `<div class="mv-item" data-mt="${l.id}" style="background:${c.bg};color:${c.text}">${esc(l.name)}</div>`;
+  });
+  html += '</div><div class="mod-btns"><button class="btn btn-outline" id="mc" style="flex:1;">Cancel</button></div>';
+  showMod(html);
+  document.getElementById('mc').addEventListener('click', closeMod);
+  document.querySelectorAll('.mv-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const tid = item.dataset.mt;
+      const src = gl(curList), dst = gl(tid);
+      const idx = src.tasks.findIndex(t => t.id === taskId);
+      if (idx >= 0) {
+        const [task] = src.tasks.splice(idx, 1);
+        task.done = false;
+        dst.tasks.push(task);
+        saveStore(); renderTasks(); toast('Moved to ' + dst.name);
+      }
+      closeMod();
+    });
+  });
+}
+
+function showImport() {
+  showMod(`<h2>Bulk import</h2>
+    <p>Paste tasks, one per line. Bullets, numbers, and checkboxes will be stripped.</p>
+    <textarea id="imp-text" placeholder="- Buy groceries&#10;- Call dentist&#10;- Finish report"></textarea>
+    <div id="imp-msg" class="mod-msg"></div>
+    <div class="mod-btns">
+      <button class="btn btn-outline" id="mc">Cancel</button>
+      <button class="btn btn-green" id="mk">Import</button>
+    </div>`);
+  document.getElementById('mc').addEventListener('click', closeMod);
+  document.getElementById('mk').addEventListener('click', () => {
+    const raw = document.getElementById('imp-text').value;
+    const msg = document.getElementById('imp-msg');
+    const lines = raw.split('\n')
+      .map(line => {
+        let s = line.trim();
+        // Strip markdown checkboxes
+        s = s.replace(/^\[.\]\s*/, '');
+        // Strip iOS Notes checkboxes and common bullet chars
+        s = s.replace(/^[\u2610\u2611\u2612\u25CB\u25CF\u25A0\u25A1\u25AA\u25AB\u2022\u2023\u25E6\u2043\u2219\u2013\u2014\u2010\u2011\u2012\u00B7\u00BB\u203A\u2794\u279C\u27A4\u25B6\u25B8\u25BA\u27A2\uFE63\uFF0D\u2796\u2015\u23AF\u25C6\u25C7\u25CA\u2666\u2605\u2606\u2736\u2B50○◯◻☐☑☒]+\s*/, '');
+        // Strip leading dashes, asterisks, arrows, tildes
+        s = s.replace(/^[\-\*\>\~]+\s*/, '');
+        // Strip numbered lists
+        s = s.replace(/^\d+[\.\)\:\-]\s*/, '');
+        // Strip leading/trailing brackets
+        s = s.replace(/^\[+/, '').replace(/\]+$/, '');
+        // Final leading/trailing space trim
+        s = s.trim();
+        return s;
+      })
+      .filter(s => s.length > 0);
+
+    if (lines.length === 0) { msg.textContent = 'No tasks found.'; msg.style.color = 'var(--accent)'; return; }
+
+    const list = gl(curList);
+    const tasks = lines.map(name => ({ id: gid(), name: name.slice(0, 200), done: false }));
+    const pendingAndSeps = list.tasks.filter(t => t.type === 'sep' || !t.done);
+    const done = list.tasks.filter(t => t.done && t.type !== 'sep');
+    list.tasks = [...tasks, ...pendingAndSeps, ...done];
+    saveStore(); renderTasks();
+    toast(tasks.length + ' task' + (tasks.length !== 1 ? 's' : '') + ' imported');
+    closeMod();
+  });
+}
+
+// ============================================================
+// GLOBAL EXPORT / IMPORT
+// ============================================================
+function doGlobalExport() {
+  let output = '';
+  store.listOrder.forEach(id => {
+    const list = gl(id); if (!list) return;
+    if (output.length > 0) output += '\n';
+    output += '# ' + list.name + '\n';
+    const tasks = list.tasks.filter(t => t.type !== 'sep');
+    tasks.forEach(t => {
+      output += t.name + '\n';
+    });
+  });
+  if (output.length === 0) { toast('Nothing to export'); return; }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(output.trim()).then(() => {
+      toast('Copied to clipboard');
+    }).catch(() => {
+      showExportFallback(output.trim());
+    });
+  } else {
+    showExportFallback(output.trim());
+  }
+}
+
+function showExportFallback(text) {
+  showMod(`<h2>Export</h2>
+    <p>Select all and copy:</p>
+    <textarea id="exp-text" readonly style="min-height:200px;">${esc(text)}</textarea>
+    <div class="mod-btns">
+      <button class="btn btn-outline" id="mc" style="flex:1;">Done</button>
+    </div>`);
+  document.getElementById('mc').addEventListener('click', closeMod);
+  const ta = document.getElementById('exp-text');
+  ta.addEventListener('focus', () => ta.select());
+}
+
+function showGlobalImport() {
+  showMod(`<h2>Import all</h2>
+    <p>Paste exported data. Lines starting with # create lists. Other lines become tasks in the current list.</p>
+    <textarea id="gimp-text" placeholder="# My List&#10;Task one&#10;Task two&#10;&#10;# Another List&#10;Task three"></textarea>
+    <div id="gimp-msg" class="mod-msg"></div>
+    <div class="mod-btns">
+      <button class="btn btn-outline" id="mc">Cancel</button>
+      <button class="btn btn-green" id="mk">Import</button>
+    </div>`);
+  document.getElementById('mc').addEventListener('click', closeMod);
+  document.getElementById('mk').addEventListener('click', () => {
+    const raw = document.getElementById('gimp-text').value;
+    const msg = document.getElementById('gimp-msg');
+    const lines = raw.split('\n');
+
+    let listsCreated = 0, tasksCreated = 0;
+    let currentList = null;
+
+    lines.forEach(line => {
+      let s = line.trim();
+      // Check for list header
+      if (s.startsWith('#')) {
+        const name = s.replace(/^#+\s*/, '').trim();
+        if (name.length > 0) {
+          const id = gid();
+          const color = CK[store.lists.length % CK.length];
+          const newList = { id, name: name.slice(0, 40), color, tasks: [] };
+          store.lists.push(newList);
+          store.listOrder.push(id);
+          currentList = newList;
+          listsCreated++;
+        }
+        return;
+      }
+      // Strip same as list-level import
+      s = s.replace(/^\[.\]\s*/, '');
+      s = s.replace(/^[\u2610\u2611\u2612\u25CB\u25CF\u25A0\u25A1\u25AA\u25AB\u2022\u2023\u25E6\u2043\u2219\u2013\u2014\u2010\u2011\u2012\u00B7\u00BB\u203A\u2794\u279C\u27A4\u25B6\u25B8\u25BA\u27A2\uFE63\uFF0D\u2796\u2015\u23AF\u25C6\u25C7\u25CA\u2666\u2605\u2606\u2736\u2B50○◯◻☐☑☒]+\s*/, '');
+      s = s.replace(/^[\-\*\>\~]+\s*/, '');
+      s = s.replace(/^\d+[\.\)\:\-]\s*/, '');
+      s = s.replace(/^\[+/, '').replace(/\]+$/, '');
+      s = s.trim();
+      if (s.length === 0) return;
+
+      if (!currentList) {
+        // Create a default list if tasks appear before any header
+        const id = gid();
+        const color = CK[store.lists.length % CK.length];
+        currentList = { id, name: 'Imported', color, tasks: [] };
+        store.lists.push(currentList);
+        store.listOrder.push(id);
+        listsCreated++;
+      }
+      currentList.tasks.push({ id: gid(), name: s.slice(0, 200), done: false });
+      tasksCreated++;
+    });
+
+    if (listsCreated === 0 && tasksCreated === 0) {
+      msg.textContent = 'Nothing to import.'; msg.style.color = 'var(--accent)'; return;
+    }
+
+    saveStore(); renderOV();
+    toast(listsCreated + ' list' + (listsCreated !== 1 ? 's' : '') + ', ' + tasksCreated + ' task' + (tasksCreated !== 1 ? 's' : '') + ' imported');
+    closeMod();
+  });
+}
+
+// ============================================================
+// VIEW SWITCH
+// ============================================================
+function switchView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  if (v === 'overview') { document.getElementById('view-overview').classList.add('active'); renderOV(); }
+  else { document.getElementById('view-list').classList.add('active'); }
+}
+
+// Tap empty space in list scroll to go back
+document.getElementById('list-scroll').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget || e.target.id === 'list-back-zone') { goBack(); }
+});
+
+// Back button
+document.getElementById('back-btn').addEventListener('click', goBack);
+
+// ============================================================
+// SWIPE TO GO BACK
+// ============================================================
+(function() {
+  const listView = document.getElementById('view-list');
+  let startX, startY, swiping = false;
+
+  listView.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    // Only trigger from left edge (first 30px)
+    if (t.clientX > 30) return;
+    startX = t.clientX; startY = t.clientY; swiping = true;
+  }, { passive: true });
+
+  listView.addEventListener('touchmove', (e) => {
+    if (!swiping) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = Math.abs(t.clientY - startY);
+    // If scrolling vertically, cancel swipe
+    if (dy > dx) { swiping = false; return; }
+  }, { passive: true });
+
+  listView.addEventListener('touchend', (e) => {
+    if (!swiping) return;
+    swiping = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    if (dx > 80) { goBack(); }
+  }, { passive: true });
+})();
+
+// ============================================================
+// GLOBAL MENU
+// ============================================================
+document.getElementById('global-menu-btn').addEventListener('click', showGlobalMenu);
+
+// ============================================================
+// ADD LIST
+// ============================================================
+function addList() {
+  const inp = document.getElementById('new-list-input');
+  const name = inp.value.trim(); if (!name) return;
+  const id = gid();
+  const color = CK[store.lists.length % CK.length];
+  store.lists.push({ id, name, color, tasks: [] });
+  store.listOrder.push(id);
+  saveStore(); inp.value = ''; renderOV();
+}
+document.getElementById('add-list-btn').addEventListener('click', addList);
+document.getElementById('new-list-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') addList(); });
+
+// ============================================================
+// ADD TASK (at top)
+// ============================================================
+function addTask() {
+  const inp = document.getElementById('new-task-input');
+  const name = inp.value.trim(); if (!name || !curList) return;
+  const list = gl(curList);
+  const task = { id: gid(), name: name.slice(0, 200), done: false };
+  // Insert at top of pending items (before any existing pending tasks or seps)
+  const firstPendingIdx = list.tasks.findIndex(t => t.type === 'sep' || !t.done);
+  if (firstPendingIdx >= 0) {
+    list.tasks.splice(firstPendingIdx, 0, task);
+  } else {
+    // All done or empty — just push to front
+    list.tasks.unshift(task);
+  }
+  saveStore(); inp.value = ''; renderTasks();
+}
+document.getElementById('add-task-btn').addEventListener('click', addTask);
+document.getElementById('new-task-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') addTask(); });
+
+// ============================================================
+// ADD SEPARATOR
+// ============================================================
+function addSep() {
+  if (!curList) return;
+  const list = gl(curList);
+  const sep = { id: gid(), type: 'sep', color: 'gold', done: false };
+  // Insert at top of pending area
+  const firstPendingIdx = list.tasks.findIndex(t => t.type === 'sep' || !t.done);
+  if (firstPendingIdx >= 0) {
+    list.tasks.splice(firstPendingIdx, 0, sep);
+  } else {
+    list.tasks.unshift(sep);
+  }
+  saveStore(); renderTasks();
+}
+document.getElementById('sep-btn').addEventListener('click', addSep);
+
+// ============================================================
+// CLEAR DONE / IMPORT
+// ============================================================
+document.getElementById('clear-btn').addEventListener('click', showClearDone);
+document.getElementById('imp-btn').addEventListener('click', showImport);
+
+// ============================================================
+// UTILS
+// ============================================================
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+
+// ============================================================
+// INIT
+// ============================================================
+renderOV();
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
+</script>
+</body>
+</html>
